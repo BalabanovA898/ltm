@@ -1,4 +1,4 @@
 #/bin/sh
 
 cargo build
-./target/debug/rust-player ~/Music
+./target/debug/rust-player ./examples

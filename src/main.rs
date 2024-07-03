@@ -4,10 +4,12 @@ use std::{env, error::Error, fs, io, process::exit};
 use soloud::*;
 use std::fs::metadata;
 use glob::glob;
+use rand::Rng;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    
+    let mut rng = rand::thread_rng();
+
     if args.len() < 2 {
         println!("The command must has 2 arguments. Right version is <rust-player example1.mp3> or <rust-player /path>");
         exit(-1);
@@ -16,14 +18,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let buffer: String = args[1].clone();
 
     let mut is_running: bool = true;
-    let mut current_track: usize = 0;
+    let mut current_track_number: usize = 0;
     let mut track_list: Vec<String> = open_file_or_directory_recursive(&buffer).expect("Error while opening a directory or file.");
 
     let stdin = io::stdin();
     let mut sl = Soloud::default().expect("Can not create a soloud");
 
     while is_running{
-        let path: String = track_list[current_track%track_list.len()].clone();
+        let path: String = track_list[current_track_number%track_list.len()].clone();
         let file_name: String = path.split("/").last().unwrap().to_string();
     
         let mut music = audio::Wav::default();
@@ -31,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         music.load(&std::path::Path::new(&path)).unwrap_or_else(|e| {
             println!("Can not load a file due to{:?}", e);
-            track_list.remove(current_track);
+            track_list.remove(current_track_number);
             is_loaded = false;
         });
 
@@ -105,23 +107,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     print_sys_info(&file_name).unwrap_or_else(|e| {
                         println!("Error while printing an info. {:?}", e);
                     });
-                    current_track += 1;
+                    current_track_number += 1;
                     sl.stop(h);
                 },
                 "next_by" | "nb" => {
                     print_sys_info(&file_name).unwrap_or_else(|e| {
                         println!("Error while printing an info. {:?}", e);
                     });
-                    current_track += command_query[1][0..command_query[1].len() - 1]
+                    current_track_number += command_query[1][0..command_query[1].len() - 1]
                         .parse::<usize>()
                         .unwrap_or_else(|e| {
                             println!("Unexpected error!!! {:?}\n Try again.", e);
-                            current_track
+                            current_track_number
                         });
                     sl.stop(h);
                 },
                 "go_to" | "gt" => {
-                    go_to_track(&file_name, &command_query, &h, &mut current_track, &track_list, &sl).unwrap_or_else(|e| {
+                    go_to_track(&file_name, &command_query, &h, &mut current_track_number, &track_list, &sl).unwrap_or_else(|e| {
                         println!("Error while printing an info. {:?}", e);
                     });
                 },
@@ -134,8 +136,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     print_sys_info(&file_name).unwrap_or_else(|e| {
                         println!("Error while printing an info. {:?}", e);
                     });
-                    if current_track >= 1 {
-                        current_track -= 1;
+                    if current_track_number >= 1 {
+                        current_track_number -= 1;
                         sl.stop(h);
                     } else {
                         println!("It is a first song.");
@@ -147,15 +149,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                 },
                 "rename" | "rn" => {
-                    let track_path: Vec<&str> = track_list[current_track].split("/").into_iter().collect();
+                    let track_path: Vec<&str> = track_list[current_track_number].split("/").into_iter().collect();
                     let new_path: String = track_path[0..track_path.len() - 1].join("/") + "/" + command_query[1] + ".mp3";
                     print!("{:?} => {}", track_path, new_path);
-                    fs::rename(&track_list[current_track], new_path).unwrap_or_else(|e| {
+                    fs::rename(&track_list[current_track_number], new_path).unwrap_or_else(|e| {
                         println!("Error with renaming. {}", e);
                     });
                 },
                 "copy" | "cp" => {
-                    fs::copy(&track_list[current_track], command_query[1]).unwrap_or_else(|e| {
+                    fs::copy(&track_list[current_track_number], command_query[1]).unwrap_or_else(|e| {
                         println!("Error while coping. {:?}", e);
                         0
                     });
@@ -163,10 +165,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("Error while printing an info. {:?}", e);
                     });
                 },
-                "delete\n" |  "del\n" => {
-                    fs::remove_file(&track_list[current_track]).unwrap_or_else(|e| {
+                "delete\n" => {
+                    fs::remove_file(&track_list[current_track_number]).unwrap_or_else(|e| {
                         println!("Error while deleting the file. {:?}", e);
                     });
+                    print_sys_info(&file_name).unwrap_or_else(|e| {
+                        println!("Error while printing an info. {:?}", e);
+                    });
+                },
+                "random\n" | "rnd\n" | "r\n"=> {
+                    current_track_number = rng.gen_range(0..track_list.len());
+                    sl.stop(h);
                     print_sys_info(&file_name).unwrap_or_else(|e| {
                         println!("Error while printing an info. {:?}", e);
                     });
@@ -241,7 +250,7 @@ fn set_current_track_volume (file_name: &String, sl: &mut Soloud, h: &Handle, co
 }
 
 fn go_to_track (file_name: &String, command_query: &Vec<&str>, h: &Handle,
-                current_track: &mut usize, track_list: &Vec<String>, sl: &Soloud) -> Result<(), Box<dyn Error>> {
+                current_track_number: &mut usize, track_list: &Vec<String>, sl: &Soloud) -> Result<(), Box<dyn Error>> {
     print_sys_info(&file_name).unwrap_or_else(|e| {
         println!("Error while printing an info. {:?}", e);
     });
@@ -249,10 +258,10 @@ fn go_to_track (file_name: &String, command_query: &Vec<&str>, h: &Handle,
         .parse::<usize>()
         .unwrap_or_else(|e| {
             println!("Unexpected error!!! {:?}\n Try again.", e);
-            *current_track
+            *current_track_number
         });
     if song_number < track_list.len() {
-        *current_track = song_number;
+        *current_track_number = song_number;
         sl.stop(*h);
     } else {
         println!("Value must be positive and less than {}", track_list.len());
