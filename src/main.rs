@@ -127,7 +127,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("Error while printing an info. {:?}", e);
                     });
                 },
-                "list\n" | "l\n" => {
+                "list\n" | "l\n" | "ls\n" => {
                     for index in 0..track_list.len() {
                         println!("{index}/{:}", track_list[index].split("/").last().unwrap().to_string());
                     }
@@ -151,7 +151,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "rename" | "rn" => {
                     let track_path: Vec<&str> = track_list[current_track_number].split("/").into_iter().collect();
                     let new_path: String = track_path[0..track_path.len() - 1].join("/") + "/" + command_query[1] + ".mp3";
-                    print!("{:?} => {}", track_path, new_path);
+                    print!("{:?} => {}\n", track_path.join("/"), new_path);
                     fs::rename(&track_list[current_track_number], new_path).unwrap_or_else(|e| {
                         println!("Error with renaming. {}", e);
                     });
@@ -179,7 +179,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     print_sys_info(&file_name).unwrap_or_else(|e| {
                         println!("Error while printing an info. {:?}", e);
                     });
-                }
+                },
+                "info\n" | "i\n" => {
+                    print_sys_info(&file_name).unwrap_or_else(|e| {
+                        println!("Error while printing an info. {:?}", e);
+                    });
+                    println!("Track_number: {}\n
+                              All track count: {}\n
+                              This application was made by Balabanov Anrey from the Gretest City of Altai Respublic just for fun. With any quistions write on WhasApp: 7-929-311-15-01 or email (unsafe): balabaniada06@mail.ru.", current_track_number, track_list.len());
+                },
                 _ => {
                     print_sys_info(&file_name).unwrap_or_else(|e| {
                         println!("Error while printing an info. {:?}", e);
@@ -219,19 +227,24 @@ fn show_help_page (file_name: &String) -> Result<(), Box<dyn Error>> {
         println!("Error while printing an info. {:?}", e);
     });
     println!("Help page.\n
-                pause or p => pause the song.\n
+                clear or cl => clear the terminal.\n
+                copy or cp => copy the song to the chosen destination.\n
                 continue or c => continue the song.\n
-                help => Show this page.
-                volume or vol => set the volume. New value msut be between -100 and 100.\n
+                delete => delete current song.\n
                 global_volume or glvol => set a global volume. New value msut be between -100 and 100.\n
-                next or n => select a next song.\n
-                next_by or nb => go to current + i track.\n
-                prev or previous => select a previous song. Only on second or highder song.\n
                 get_volume or gvol => print a current volume.\n
                 go_to or gt => play the track by index in track list.\n
-                list or l => show all tracks.\n
-                clear or cl => clear the terminal.\n
+                help => Show this page.\n
+                info or i => Show an info about the application and tracklist.\n
+                list or l or ls => show all tracks.\n
+                next_by or nb => go to current + i track.\n
+                next or n => select a next song.\n
+                pause or p => pause the song.\n
+                prev or previous or back or b => select a previous song. Only on second or highder song.\n
                 quit or q => exit from application.\n
+                rename or rn => rename the song.\n
+                random or rnd or r => play a random song.\n
+                volume or vol => set the volume. New value msut be between -100 and 100.\n
             ");
     Ok(())
 }
